@@ -10,12 +10,3 @@ The R code requires an input data matrix in .CSV file format, which should be pl
 * the first column should contain the names of the compounds,
 * the following columns should contain the descriptor values (independent variables),
 * the last column should represent the experimental toxicity (dependent variable).
-
-Name  Descriptor(1) Descriptor(2) Descriptor(3) ... Descriptor(x)  Toxicity 
-AB        12,0          0,23          1         ...     1,0           3,5          
-CD        45,5          0,30          2         ...     1,2           4,5   
-EF        46,3          0,67          1         ...     1,0           4,7   
-GH        34,9          0,24          1         ...     1,3           3,2   
-IJ        56,7          0,31          2         ...     1,5           5,5 
-...       ...           ...           ...       ...     ...           ... 
-YZ        45,5          0,80          1         ...     1,4           3,7
