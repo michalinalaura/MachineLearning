@@ -1,0 +1,186 @@
+---
+title: "Machine learning – Random Forests + Data Analysis"
+author: "Michalina Miszczak"
+date: "2025-03-03"
+output: html_document
+---
+
+
+# ==== Introduction ====
+
+# The presented script is used to develop a predictive model for the Quantitative Structure-Activity Relationship (QSAR) of a set of advanced nanomaterials. 
+
+# The data were collected based on scientific publications. The independent variables include the dose (µg/mouse), duration of exposure (in days) to the nanomaterial, as well as the aspect ratio (the ratio of length to diameter) and BET_SSA (specific surface area measured using the Brunauer-Emmett-Teller method). The dependent variable is DNA damage in bronchoalveolar lavage (BAL) fluid, expressed as the percentage of DNA strand breaks (TDNA%). DOI: 10.3390/nano13061059; 10.1021/acsnano.9b08818; 10.1016/j.taap.2019.114830; 10.1093/mutage/gew046; 10.1177/0960327118774910; 10.1080/17435390.2022.2106906; 10.1002/em.21888; 10.1080/17435390.2019.1654004; 10.1016/j.etap.2019.103266; 10.1016/j.etap.2019.103303.
+
+# In addition to the predictive model, the script includes a multivariate data analysis essential for understanding the data structure.
+
+# ======
+
+# ==== Input file ====
+# The R script requires an input data matrix in .CSV file format, which should be placed in the same directory as the R script file. The decimal separator should be a comma. The matrix should be arranged as follows:
+#* the first column should contain the names of the compounds,
+#* the following columns should contain the descriptor values (independent variables),
+#* the last column should represent the experimental toxicity (dependent variable).
+
+#Name  Descriptor(1) Descriptor(2) Descriptor(3) ... Descriptor(x)  Toxicity 
+#AB        12,0          0,23          1         ...     1,0           3,5          
+#CD        45,5          0,30          2         ...     1,2           4,5   
+#EF        46,3          0,67          1         ...     1,0           4,7   
+#GH        34,9          0,24          1         ...     1,3           3,2   
+#IJ        56,7          0,31          2         ...     1,5           5,5 
+#...       ...           ...           ...       ...     ...           ... 
+#YZ        45,5          0,80          1         ...     1,4           3,7
+
+# ======
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      cache = FALSE,
+                      fig.align = 'center',
+                      dpi = 300)
+```
+
+
+```{r packages, echo=FALSE}
+
+packages <- function(x){
+  not_installed <- x[!x %in% installed.packages()[, "Package"]]
+  if(length(not_installed) > 0) 
+    install.packages(not_installed, dependencies = TRUE)
+  invisible(lapply(x, require, character.only = TRUE))
+}
+
+packages(c("magrittr", "dplyr", "tidyverse", "GGally", "ggpubr", "corrplot"))
+```
+
+
+```{r data import}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+data <- read.csv2("input_file.csv", header = TRUE, dec = ",")
+```
+
+
+```{r splitting, autoscaling}
+# Data sorting
+SortedData <- data[order(data[, ncol(data)]), ]
+
+# The most extreme values should be included in the training set. The number of rows with the lowest and highest values to be included in the training set: 
+nexv = 3
+
+ExRows <- rbind(SortedData[1:nexv, ], SortedData[(nrow(SortedData)-nexv+1):nrow(SortedData), ])
+
+DataSplit <- SortedData[-c(1:nexv, (nrow(SortedData)-nexv+1):nrow(SortedData)), ]
+
+# Training and Validation Sets - 
+ValidationSet <- data.frame()  
+TrainingSet <- data.frame()       
+
+for (i in seq_len(nrow(DataSplit))) {
+  # The data split ratio is 2:1, where every third element is placed in the validation set.
+  if (i %% 3 == 1) {
+    ValidationSet <- rbind(ValidationSet, DataSplit[i, ])
+  } else {
+    TrainingSet <- rbind(TrainingSet, DataSplit[i, ])
+  }
+}
+
+TrainingSet <- rbind(ExRows, TrainingSet)
+
+TrainingSet$Set <- 'T'
+ValidationSet$Set <- 'V'
+
+# Responces vectors
+RespTrain <- as.vector(TrainingSet[, ncol(TrainingSet) - 1])
+RespVal <- as.vector(ValidationSet[, ncol(ValidationSet) - 1])
+
+# Matrix with descriptors
+DescT <- as.matrix(TrainingSet[, 2:(ncol(TrainingSet) - 2)])
+DescV <- as.matrix(ValidationSet[, 2:(ncol(ValidationSet) - 2)])
+
+# Name of columns
+ChemNameT <- TrainingSet[,1]
+ChemNameV <- ValidationSet[,1]
+
+# Autoscaling data
+scaling <- function(x, sc_data){
+  average <- mean(sc_data)
+  stdev <- sd(sc_data)
+  if (stdev == 0) {
+    return(rep(0, length(x)))  
+  }
+  autoscaled_x <- (x-average)/stdev
+  autoscaled_x
+}
+
+AutoscDescT <- as.data.frame(matrix(NA, nrow = nrow(DescT), ncol = ncol(DescT)))
+AutoscDescV <- as.data.frame(matrix(NA, nrow = nrow(DescV), ncol = ncol(DescV)))
+
+
+for (i in 1:ncol(DescT)) {
+  AutoscDescT[, i] <- scaling(DescT[, i], DescT[, i])
+}
+
+for (i in 1:ncol(DescV)) {
+  AutoscDescV[, i] <- scaling(DescV[, i], DescT[, i])
+}
+
+DescNames <- colnames(DescT)
+AutoscDescNames <- paste0("Autoscaled_", DescNames) 
+
+# Summary table
+Summary <- data.frame(rbind(
+  setNames(cbind(ChemNameT, DescT, AutoscDescT, RespTrain, TrainingSet$Set), 
+           c("ChemName", DescNames, AutoscDescNames, "Experimental", "Set")), 
+  setNames(cbind(ChemNameV, DescV, AutoscDescV, RespVal, ValidationSet$Set), 
+           c("ChemName", DescNames, AutoscDescNames, "Experimental", "Set"))))
+
+rownames(Summary) <- NULL
+
+print(Summary)
+
+```
+
+```{r heatmap for independent variables, fig.width=6, fig.height=6}
+# The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
+
+CorrelationMatrix <- cor(data[, 2:(ncol(data) - 1)], use = "complete.obs")
+
+col <- colorRampPalette(c("#6e7222","#b8bf3a", "#c6cb61", "#dbdf9c", "#b3b0e5", "#5c57ac", "#2e2988", "#292479"))
+
+corrplot(CorrelationMatrix, 
+          method = "color", 
+          col = col(100), 
+          tl.col = "black", 
+          tl.srt = 45, 
+          addCoef.col = "black", 
+          number.cex=0.7)
+
+```
+
+```{r boxplot for dependent variables, fig.width=10, fig.height=6}
+#The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
+
+par(mfrow = c(1,2))
+
+boxplot(TDNA~ Dose, 
+        data = data,
+        col = "#09938F", 
+        xlab = "Dose", 
+        ylab = "%TDNA", 
+        main = "Distribution of %TDNA values",
+        cex.axis = 0.7, 
+        cex.lab = 1,    
+        cex.main = 1.2)
+boxplot(TDNA~ Day, 
+        data = data,
+        col = "#8f0993", 
+        xlab = "Day", 
+        ylab = "%TDNA", 
+        main = "Distribution of %TDNA values",
+        cex.axis = 0.7, 
+        cex.lab = 1,    
+        cex.main = 1.2)
+
+```
+
