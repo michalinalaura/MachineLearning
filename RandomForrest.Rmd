@@ -2,13 +2,16 @@
 title: "Machine learning – Random Forests + Data Analysis"
 author: "Michalina Miszczak"
 date: "2025-03-03"
-output: html_document
+output: 
+  html_document:  
+    self_contained: TRUE
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, 
                       message = FALSE, 
                       cache = FALSE,
+                      warning = FALSE,
                       fig.align = 'center',
                       dpi = 300)
 ```
@@ -113,8 +116,10 @@ print(Summary)
 
 ```
 
-```{r heatmap for independent variables, fig.width=6, fig.height=6}
+```{r heatmap for independent variables, fig.width=6, fig.height=6, fig.path='figures/'}
 # The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
+
+png("figures/HeatMap.png", width = 6, height = 6, units = "in", res = 600)
 
 CorrelationMatrix <- cor(data[, 2:(ncol(data) - 1)], use = "complete.obs")
 
@@ -128,10 +133,16 @@ corrplot(CorrelationMatrix,
           addCoef.col = "black", 
           number.cex=0.7)
 
+invisible(dev.off())
+
 ```
+
+![HeatMap](figures/HeatMap.png)
 
 ```{r boxplot for dependent variables, fig.width=10, fig.height=6}
 #The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
+
+png("figures/Boxplot.png", width = 10, height = 6, units = "in", res = 600)
 
 par(mfrow = c(1,2))
 
@@ -154,5 +165,10 @@ boxplot(TDNA~ Day,
         cex.lab = 1,    
         cex.main = 1.2)
 
+invisible(dev.off())
+
 ```
+
+![Boxplot](figures/Boxplot.png)
+
 
