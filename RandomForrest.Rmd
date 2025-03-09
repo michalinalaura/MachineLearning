@@ -1,5 +1,5 @@
 ---
-title: "Machine learning – Random Forests + Data Analysis"
+title: "Machine learning – Random Forrests + Data Analysis"
 author: "Michalina Miszczak"
 date: "2025-03-03"
 output: 
@@ -26,7 +26,7 @@ packages <- function(x){
   invisible(lapply(x, require, character.only = TRUE))
 }
 
-packages(c("magrittr", "dplyr", "tidyverse", "GGally", "ggpubr", "corrplot"))
+packages(c("magrittr", "dplyr", "tidyverse", "GGally", "ggpubr", "corrplot", "FactoMineR", "factoextra"))
 ```
 
 
@@ -117,9 +117,8 @@ print(Summary)
 ```
 
 ```{r heatmap for independent variables, fig.width=6, fig.height=6, fig.path='figures/'}
-# The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
 
-png("figures/HeatMap.png", width = 6, height = 6, units = "in", res = 600)
+png("docs/figures/HeatMap.png", width = 6, height = 6, units = "in", res = 600)
 
 CorrelationMatrix <- cor(data[, 2:(ncol(data) - 1)], use = "complete.obs")
 
@@ -136,13 +135,15 @@ corrplot(CorrelationMatrix,
 invisible(dev.off())
 
 ```
+Heatmap
 
-![HeatMap](figures/HeatMap.png)
+The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
+
+![](docs/figures/HeatMap.png)
 
 ```{r boxplot for dependent variables, fig.width=10, fig.height=6}
-#The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
 
-png("figures/Boxplot.png", width = 10, height = 6, units = "in", res = 600)
+png("docs/figures/Boxplot.png", width = 10, height = 6, units = "in", res = 600)
 
 par(mfrow = c(1,2))
 
@@ -169,6 +170,69 @@ invisible(dev.off())
 
 ```
 
-![Boxplot](figures/Boxplot.png)
+Boxplots
+
+The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
+
+![](docs/figures/Boxplot.png)
+
+```{r PCA}
+DataPCA <- data[, -c(1, ncol(data))]
+ResultsPCA <-  PCA(DataPCA, scale.unit = TRUE, ncp = 5, graph = FALSE)
+
+EigenValues <- ResultsPCA$eig 
+
+print(EigenValues)
+
+MaxYEV <- max(EigenValues[, "percentage of variance"]) + 5 
+png("docs/figures/EigenValues.png", width = 10, height = 6, units = "in", res = 600)
+fviz_eig(ResultsPCA, 
+         addlabels = TRUE, 
+         main = "Scree plot",
+         col = "#09938F",              
+         barfill = "#09938F",   
+         border = "black",
+         ylim = c(0, MaxYEV)) +
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(), 
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA), 
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title = element_text(size = 15))
+invisible(dev.off())
+
+png("docs/figures/Correlation_circle.png", width = 10, height = 6, units = "in", res = 600)
+fviz_pca_var(ResultsPCA, 
+             col.var = "contrib",
+             gradient.cols = c("#033c4c", "#366f7f", "#9ab7bf")) +
+  ggtitle("PCA Variable Contributions") +
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA), 
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title = element_text(size = 15),
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 11)) +
+  labs(color = "Contribution") 
+invisible(dev.off())
 
 
+```
+
+Scree plot
+
+The Scree plot displays the eigenvalues for each principal component in PCA, indicating how much variance in the data is explained by each component. The plot helps identify which components have the most significant impact on the data, allowing for the selection of the number of components for further analysis.
+
+![](docs/figures/EigenValues.png)
+
+PCA Variable Contributions
+
+The correlation between a variable and a principal component (PC) determines the position of the variable on the component. In contrast to the plot of observations, where they are represented by their projections, variables are represented by vectors whose directions and lengths reflect their correlations with the principal components. 
+Information adapted from the detailed study of Principal Component Analysis available at: https://f0nzie.github.io/machine_learning_compilation/detailed-study-of-principal-component-analysis.html
+
+![](docs/figures/Correlation_circle.png)
