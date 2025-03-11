@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE,
 
 
 ```{r packages, echo=FALSE}
-
+# Installing and loading  packages
 packages <- function(x){
   not_installed <- x[!x %in% installed.packages()[, "Package"]]
   if(length(not_installed) > 0) 
@@ -31,7 +31,10 @@ packages(c("magrittr", "dplyr", "tidyverse", "GGally", "ggpubr", "corrplot", "Fa
 
 
 ```{r data import}
+# Setting the working directory to the folder containing the currently open file in RStudio
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# Loading data
 data <- read.csv2("input_file.csv", header = TRUE, dec = ",")
 ```
 
@@ -44,15 +47,14 @@ SortedData <- data[order(data[, ncol(data)]), ]
 nexv = 3
 
 ExRows <- rbind(SortedData[1:nexv, ], SortedData[(nrow(SortedData)-nexv+1):nrow(SortedData), ])
-
 DataSplit <- SortedData[-c(1:nexv, (nrow(SortedData)-nexv+1):nrow(SortedData)), ]
 
-# Training and Validation Sets - 
+# Training and validation sets 
 ValidationSet <- data.frame()  
 TrainingSet <- data.frame()       
 
 for (i in seq_len(nrow(DataSplit))) {
-  # The data split ratio is 2:1, where every third element is placed in the validation set.
+  # The data split ratio is 2:1, where every third element is placed in the validation set
   if (i %% 3 == 1) {
     ValidationSet <- rbind(ValidationSet, DataSplit[i, ])
   } else {
@@ -117,13 +119,16 @@ print(Summary)
 ```
 
 ```{r heatmap for independent variables, fig.width=6, fig.height=6, fig.path='figures/'}
-
+# Save Heatmap to PNG
 png("docs/figures/HeatMap.png", width = 6, height = 6, units = "in", res = 600)
 
+# Computing the correlation matrix
 CorrelationMatrix <- cor(data[, 2:(ncol(data) - 1)], use = "complete.obs")
 
+# Color palette for the plot
 col <- colorRampPalette(c("#6e7222","#b8bf3a", "#c6cb61", "#dbdf9c", "#b3b0e5", "#5c57ac", "#2e2988", "#292479"))
 
+# Heatmap
 corrplot(CorrelationMatrix, 
           method = "color", 
           col = col(100), 
@@ -133,7 +138,6 @@ corrplot(CorrelationMatrix,
           number.cex=0.7)
 
 invisible(dev.off())
-
 ```
 Heatmap
 
@@ -142,11 +146,13 @@ The heatmap plot displays the correlation levels between the independent variabl
 ![](docs/figures/HeatMap.png)
 
 ```{r boxplot for dependent variables, fig.width=10, fig.height=6}
-
+#Save Boxplot to PNG
 png("docs/figures/Boxplot.png", width = 10, height = 6, units = "in", res = 600)
 
+# Arranging two plots horizontally in a single graphic
 par(mfrow = c(1,2))
 
+# Boxplots
 boxplot(TDNA~ Dose, 
         data = data,
         col = "#09938F", 
@@ -167,7 +173,6 @@ boxplot(TDNA~ Day,
         cex.main = 1.2)
 
 invisible(dev.off())
-
 ```
 
 Boxplots
@@ -177,15 +182,20 @@ The distribution of the dependent variable is shown across different doses and e
 ![](docs/figures/Boxplot.png)
 
 ```{r PCA}
+# Selecting data for PCA
 DataPCA <- data[, -c(1, ncol(data))]
+# PCA
 ResultsPCA <-  PCA(DataPCA, scale.unit = TRUE, ncp = 5, graph = FALSE)
 
 EigenValues <- ResultsPCA$eig 
 
 print(EigenValues)
 
+# Setting the maximum value on the Y-axis
 MaxYEV <- max(EigenValues[, "percentage of variance"]) + 5 
+# Save Scree plot to PNG
 png("docs/figures/EigenValues.png", width = 10, height = 6, units = "in", res = 600)
+# Scree plot
 fviz_eig(ResultsPCA, 
          addlabels = TRUE, 
          main = "Scree plot",
@@ -203,10 +213,12 @@ fviz_eig(ResultsPCA,
     axis.title = element_text(size = 15))
 invisible(dev.off())
 
+# Save Contributions plot to PNG
 png("docs/figures/Correlation_circle.png", width = 10, height = 6, units = "in", res = 600)
+# Contributions plot
 fviz_pca_var(ResultsPCA, 
              col.var = "contrib",
-             gradient.cols = c("#033c4c", "#366f7f", "#9ab7bf")) +
+             gradient.cols = c("#9ab7bf", "#366f7f", "#033c4c")) +
   ggtitle("PCA Variable Contributions") +
   theme(
     panel.grid.major.x = element_blank(), 
@@ -221,7 +233,34 @@ fviz_pca_var(ResultsPCA,
   labs(color = "Contribution") 
 invisible(dev.off())
 
-
+# Save Biplot to PNG
+png("docs/figures/Biplot.png", width = 10, height = 8, units = "in", res = 600)
+TDNA_PCA <- as.numeric(data$TDNA)
+Day_PCA <- as.factor(data$Day)
+# Biplot
+fviz_pca_biplot(ResultsPCA, 
+                # Endpoits
+                geom.ind = "point",
+                fill.ind = Day_PCA, # color the points based on the day number
+                col.ind = "black",
+                pointshape = 21, 
+                pointsize = TDNA_PCA, # point size depends on toxicity value
+                palette = "Dark2",
+                repel = TRUE,
+                addEllipses = TRUE,
+                # Variables 
+                col.var = "contrib",
+                gradient.cols = c("#9ab7bf", "#366f7f", "#033c4c"),
+                
+                legend.title = list(fill = "Day", color = "Contribution of variables", size = "Toxicity value")) + 
+  labs(title = "PCA", x = "PC1 (41.7%)", y = "PC2 (27.6%)") + 
+  theme_bw() + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title = element_text(size = 15),
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 11)) 
+invisible(dev.off())
 ```
 
 Scree plot
@@ -236,3 +275,7 @@ The correlation between a variable and a principal component (PC) determines the
 Information adapted from the detailed study of Principal Component Analysis available at: https://f0nzie.github.io/machine_learning_compilation/detailed-study-of-principal-component-analysis.html
 
 ![](docs/figures/Correlation_circle.png)
+
+PCA Biplot 
+
+![](docs/figures/Biplot.png)
