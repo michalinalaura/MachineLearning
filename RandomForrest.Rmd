@@ -139,7 +139,7 @@ corrplot(CorrelationMatrix,
 
 invisible(dev.off())
 ```
-Heatmap
+### Heatmap
 
 The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
 
@@ -175,7 +175,7 @@ boxplot(TDNA~ Day,
 invisible(dev.off())
 ```
 
-Boxplots
+### Boxplots
 
 The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
 
@@ -263,19 +263,40 @@ fviz_pca_biplot(ResultsPCA,
 invisible(dev.off())
 ```
 
-Scree plot
+### Scree plot
 
 The Scree plot displays the eigenvalues for each principal component in PCA, indicating how much variance in the data is explained by each component. The plot helps identify which components have the most significant impact on the data, allowing for the selection of the number of components for further analysis.
 
 ![](docs/figures/EigenValues.png)
 
-PCA Variable Contributions
+### PCA Variable Contributions
 
-The correlation between a variable and a principal component (PC) determines the position of the variable on the component. In contrast to the plot of observations, where they are represented by their projections, variables are represented by vectors whose directions and lengths reflect their correlations with the principal components. 
+The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The contribution represents the proportion of a variable's contribution to a given principal component, expressed as a percentage. 
+* Positively correlated variables are grouped together.
+* Negatively correlated variables are positioned on opposite sides of the plot origin (opposed quadrants).
+Variables that are correlated with PC1 and PC2 are the most important in explaining the variability in the data set.
+
 Information adapted from the detailed study of Principal Component Analysis available at: https://f0nzie.github.io/machine_learning_compilation/detailed-study-of-principal-component-analysis.html
 
 ![](docs/figures/Correlation_circle.png)
+* Dose: A weak negative contribution to PC1 and a moderate positive contribution to PC2.
+* Day: A weak positive contribution to PC1 and a large positive contribution to PC2.
+* Aspect ratio: A large positive contribution to PC1 and a weak positive contribution to PC2.
+* BET_SSA: A large positive contribution to PC1 and a weak positive contribution to PC2.
+* Aspect ratio and BET_SSA are strongly correlated with each other.
 
-PCA Biplot 
+
+### PCA Biplot 
+
+A biplot simultaneously presents the distribution of observations and the contribution of variables. Four key pieces of information can be extracted from it:
+
+1. Distribution of observations: The distance between points indicates the similarity between observations—observations that are closer together are more similar with respect to the variables.
+
+2. Contribution of variables: The direction of the vectors indicates the direction in which the variables have the greatest influence on the principal components, while the length of the vector reflects the strength of this influence. The longer the vector, the stronger the contribution of the variable to the respective component.
+
+3. Relationships between variables: Variables represented by vectors in the same direction are positively correlated, whereas those in opposite directions exhibit negative correlation. Variables that are orthogonal to each other are independent (uncorrelated).
+
+4. Interactions between observations and variables: It is also possible to observe how individual variables influence the positioning of observations in the principal component space. Observations that are close to a given variable’s vector have a high value for that variable.
+
 
 ![](docs/figures/Biplot.png)
