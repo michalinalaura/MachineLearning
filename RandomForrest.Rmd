@@ -29,6 +29,7 @@ packages <- function(x){
 packages(c("magrittr", "dplyr", "tidyverse", "GGally", "ggpubr", "corrplot", "FactoMineR", "factoextra", "randomForest"))
 ```
 
+### Setting the working directory and importing data
 
 ```{r data import}
 # Setting the working directory to the folder containing the currently open file in RStudio
@@ -38,6 +39,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 data <- read.csv2("input_file.csv", header = TRUE, dec = ",")
 ```
 
+
+### Data preparing
 
 ```{r splitting, autoscaling}
 # Data sorting
@@ -114,15 +117,21 @@ Summary <- data.frame(rbind(
 
 rownames(Summary) <- NULL
 
-print(Summary)
+print(head(Summary))
+print(tail(Summary))
 
 ```
 
-```{r heatmap for independent variables, fig.width=6, fig.height=6, fig.path='figures/'}
+### Heatmap
+
+The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
+
+```{r heatmap for independent variables}
 # Save Heatmap to PNG
-png("docs/figures/HeatMap.png", width = 6, height = 6, units = "in", res = 600)
+png("docs/figures/HeatMap.png", width = 1500, height = 1500, units = "px", res = 300)
 
 # Computing the correlation matrix
+
 CorrelationMatrix <- cor(data[, 2:(ncol(data) - 1)], use = "complete.obs")
 
 # Color palette for the plot
@@ -135,19 +144,22 @@ corrplot(CorrelationMatrix,
           tl.col = "black", 
           tl.srt = 45, 
           addCoef.col = "black", 
-          number.cex=0.7)
+          number.cex=0.8,
+          tl.cex = 0.9,
+          cl.cex = 0.9)
 
 invisible(dev.off())
 ```
-### Heatmap
 
-The heatmap plot displays the correlation levels between the independent variables. Correlation coefficients are determined using Pearson's test.
+![](docs/figures/HeatMap.png){width=60%}
 
-![](docs/figures/HeatMap.png)
+### Boxplots 
 
-```{r boxplot for dependent variables, fig.width=10, fig.height=6}
+The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
+
+```{r boxplot for dependent variables}
 #Save Boxplot to PNG
-png("docs/figures/Boxplot.png", width = 10, height = 6, units = "in", res = 600)
+png("docs/figures/Boxplot.png", width = 2400, height = 1440, units = "px", res = 300)
 
 # Arranging two plots horizontally in a single graphic
 par(mfrow = c(1,2))
@@ -159,7 +171,7 @@ boxplot(TDNA~ Dose,
         xlab = "Dose", 
         ylab = "%TDNA", 
         main = "Distribution of %TDNA values",
-        cex.axis = 0.7, 
+        cex.axis = 0.5, 
         cex.lab = 1,    
         cex.main = 1.2)
 boxplot(TDNA~ Day, 
@@ -168,18 +180,16 @@ boxplot(TDNA~ Day,
         xlab = "Day", 
         ylab = "%TDNA", 
         main = "Distribution of %TDNA values",
-        cex.axis = 0.7, 
+        cex.axis = 0.5, 
         cex.lab = 1,    
         cex.main = 1.2)
 
 invisible(dev.off())
 ```
 
-### Boxplots
-
-The distribution of the dependent variable is shown across different doses and exposure durations to the nanomaterial. The boxplot highlights the toxicity values, with the median indicated by the thick line within the box. The box boundaries represent the first and third quartiles of the data, while the "whiskers" extend to 1.5 times the interquartile range (IQR) beyond the quartiles. Points beyond this range are identified as outliers.
-
 ![](docs/figures/Boxplot.png)
+
+### PCA analysis 
 
 ```{r PCA}
 # Selecting data for PCA
@@ -194,7 +204,7 @@ print(EigenValues)
 # Setting the maximum value on the Y-axis
 MaxYEV <- max(EigenValues[, "percentage of variance"]) + 5 
 # Save Scree plot to PNG
-png("docs/figures/EigenValues.png", width = 10, height = 6, units = "in", res = 600)
+png("docs/figures/EigenValues.png", width = 2400, height = 1900, units = "px", res = 300)
 # Scree plot
 fviz_eig(ResultsPCA, 
          addlabels = TRUE, 
@@ -214,7 +224,7 @@ fviz_eig(ResultsPCA,
 invisible(dev.off())
 
 # Save Contributions plot to PNG
-png("docs/figures/Correlation_circle.png", width = 10, height = 6, units = "in", res = 600)
+png("docs/figures/Correlation_circle.png", width = 2400, height = 1440, units = "px", res = 300)
 # Contributions plot
 fviz_pca_var(ResultsPCA, 
              col.var = "contrib",
@@ -234,7 +244,7 @@ fviz_pca_var(ResultsPCA,
 invisible(dev.off())
 
 # Save Biplot to PNG
-png("docs/figures/Biplot.png", width = 10, height = 8, units = "in", res = 600)
+png("docs/figures/Biplot.png", width = 2400, height = 1900, units = "px", res = 300)
 TDNA_PCA <- as.numeric(data$TDNA)
 Day_PCA <- as.factor(data$Day)
 # Biplot
@@ -267,22 +277,30 @@ invisible(dev.off())
 
 The Scree plot displays the eigenvalues for each principal component in PCA, indicating how much variance in the data is explained by each component. The plot helps identify which components have the most significant impact on the data, allowing for the selection of the number of components for further analysis.
 
-![](docs/figures/EigenValues.png)
+![](docs/figures/EigenValues.png){width=70%}
 
 ### PCA Variable Contributions
 
 The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. The contribution represents the proportion of a variable's contribution to a given principal component, expressed as a percentage. 
+
 * Positively correlated variables are grouped together.
+
 * Negatively correlated variables are positioned on opposite sides of the plot origin (opposed quadrants).
+
 Variables that are correlated with PC1 and PC2 are the most important in explaining the variability in the data set.
 
 Information adapted from the detailed study of Principal Component Analysis available at: https://f0nzie.github.io/machine_learning_compilation/detailed-study-of-principal-component-analysis.html
 
 ![](docs/figures/Correlation_circle.png)
+
 * Dose: A weak negative contribution to PC1 and a moderate positive contribution to PC2.
+
 * Day: A weak positive contribution to PC1 and a large positive contribution to PC2.
+
 * Aspect ratio: A large positive contribution to PC1 and a weak positive contribution to PC2.
+
 * BET_SSA: A large positive contribution to PC1 and a weak positive contribution to PC2.
+
 * Aspect ratio and BET_SSA are strongly correlated with each other.
 
 
@@ -300,6 +318,9 @@ A biplot simultaneously presents the distribution of observations and the contri
 
 
 ![](docs/figures/Biplot.png)
+
+### Results 
+
 ```{r RF Grid}
 # Metrics 
 R2Q2 <- function(experimental, predicted) {
@@ -316,12 +337,12 @@ SampizePerc <- floor(nrow(AutoscDescT) * c(0.5, 0.7, 0.9, 1))
 
 grid <- expand.grid(ntree = c(500, 750, 1000),
                     mtry = seq(2, 4, by = 1),
-                    nodsize = c(1, 5, 10, 20),
+                    nodesize = c(1, 5, 10, 20),
                     sampsize = SampizePerc, 
                     maxnodes = seq(5, 25, by = 5))
 
 # Table for resuts
-results <- data.frame(ntree = numeric(), mtry = numeric(), nodsize = numeric(), sampsize = numeric(), maxnodes = numeric(), Q2 = numeric(), RMSEext = numeric(), R2 = numeric(), RMSEext = numeric())
+results <- data.frame(ntree = numeric(), mtry = numeric(), nodesize = numeric(), sampsize = numeric(), maxnodes = numeric(), Q2 = numeric(), RMSEext = numeric(), R2 = numeric(), RMSEext = numeric())
 
 # Grid search 
 for (i in 1:nrow(grid)) {
@@ -330,7 +351,7 @@ for (i in 1:nrow(grid)) {
     model <- randomForest(x = AutoscDescT, RespTrain, 
                           ntree = params$ntree, 
                           mtry = params$mtry, 
-                          nodsize = params$nodsize, 
+                          nodesize = params$nodesize, 
                           sampsize = params$sampsize, 
                           maxnodes = params$maxnodes, 
                           replace = TRUE, 
@@ -349,7 +370,7 @@ for (i in 1:nrow(grid)) {
   if (Q2 > 0.85) {
   results <- rbind(results, data.frame(ntree = params$ntree, 
                                        mtry = params$mtry, 
-                                       nodsize = params$nodsize, 
+                                       nodesize = params$nodesize, 
                                        sampsize = params$sampsize, 
                                        maxnodes = params$maxnodes, 
                                        Q2 = Q2, 
@@ -361,8 +382,65 @@ for (i in 1:nrow(grid)) {
 
 # The secon selection
 ResultSort <- results[order(-results$Q2), ]
+BestRes <- head(ResultSort)
 
-print(head(ResultSort))
+print(BestRes)
 ```
-### Results 
+
 The primary evaluation of a model relies on the R² and Q² parameters. R² measures how well the data fit the model, while Q² assesses its predictive power. A key threshold for both is 0.7—values above this indicate good data fit and strong predictive performance. Additionally, the difference between R² and Q² matters; if it exceeds 0.3, it may signal overfitting. For example, with Q² = 0.89 and R² = 0.94, the model's performance is considered satisfactory. The RMSEc (Root Mean Squared Error of calibration) and RMSEext (Root Mean Squared Error of validation) values should be as low as possible and close to each other.
+
+### Leave-One-Out Cross-Validation 
+
+The Leave-One-Out Cross-Validation (LOO CV) method is particularly useful for small to medium-sized datasets, as it can be computationally intensive. The method works by sequentially excluding one data point from the training set, recalibrating the model, and then making a prediction for the excluded point. The model's statistics, such as Qcv and RMSEext, follow the same principles as the calibration and external validation statistics described earlier. These metrics help determine whether the model is stable and robust against the removal of individual data points.
+
+```{r crossvalidation}
+#Table for results
+resultscv <- data.frame(ntree = numeric(), mtry = numeric(), nodesize = numeric(), sampsize = numeric(), maxnodes = numeric(), Q2cv = numeric(), RMSEcv = numeric())
+
+# Loop for parameters
+for (i in 1:nrow(BestRes)) {
+  HypParm <- BestRes[i, ]
+  
+  TrainPredLoo <- numeric(length(RespTrain))
+  # Loop for crossvalidation
+  for (j in 1:length(RespTrain)) {
+    TrainIndicates <- setdiff(1:length(RespTrain), j)
+    TrainSetLoo <- AutoscDescT[TrainIndicates, ]
+    RespTrainLoo <- RespTrain[TrainIndicates]  
+    ValSetLoo <- AutoscDescT[j, , drop = FALSE]
+    RespValLoo <- RespTrain[j]
+    
+    set.seed(8)
+    # In the training set, there is one less element.
+    sampsizevalue <- HypParm$sampsize - 1
+    
+    model <- randomForest(x = TrainSetLoo, y = RespTrainLoo, 
+                          ntree = HypParm$ntree, 
+                          mtry = HypParm$mtry, 
+                          nodesize = HypParm$nodesize, 
+                          sampsize = sampsizevalue, 
+                          maxnodes = HypParm$maxnodes, 
+                          replace = TRUE, 
+                          importance = TRUE, 
+                          do.trace = FALSE)  
+    
+    PredLoo <- predict(model, newdata = ValSetLoo)
+    
+    TrainPredLoo[j] <- PredLoo
+  }
+  Q2cv <- R2Q2(RespTrain, TrainPredLoo)
+  RMSEcv <- RMSE(RespTrain, TrainPredLoo)
+
+  resultscv <- rbind(resultscv, data.frame(ntree = HypParm$ntree, 
+                                       mtry = HypParm$mtry, 
+                                       nodesize = HypParm$nodesize, 
+                                       sampsize = HypParm$sampsize, 
+                                       maxnodes = HypParm$maxnodes, 
+                                       Q2cv = Q2cv, 
+                                       RMSEcv = RMSEcv))
+}
+
+resultsall<- cbind(resultscv, Q2ext = BestRes$Q2, RMSEext = BestRes$RMSEext, R2 = BestRes$R2, RMSEc = BestRes$RMSEc)
+print(resultsall)
+```
+
