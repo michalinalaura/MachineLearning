@@ -830,8 +830,8 @@ for (i in 1:nrow(BestRes)) {
                                        RMSEcv = RMSEcv))
 }
 
-resultsall&lt;- cbind(resultscv, Q2ext = BestRes$Q2, RMSEext = BestRes$RMSEext, R2 = BestRes$R2, RMSEc = BestRes$RMSEc)
-print(resultsall)</code></pre>
+ResultsAll&lt;- cbind(resultscv, Q2ext = BestRes$Q2, RMSEext = BestRes$RMSEext, R2 = BestRes$R2, RMSEc = BestRes$RMSEc)
+print(ResultsAll)</code></pre>
 <pre><code>##   ntree mtry nodesize sampsize maxnodes      Q2cv   RMSEcv     Q2ext  RMSEext
 ## 1   500    2       10      189       25 0.8909174 1.776372 0.8881863 1.597905
 ## 2   500    2       10      170       25 0.8893868 1.788791 0.8868944 1.607110
@@ -846,6 +846,90 @@ print(resultsall)</code></pre>
 ## 4 0.9372759 1.347017
 ## 5 0.9395259 1.322637
 ## 6 0.9367859 1.352269</code></pre>
+</div>
+<div id="the-best-model" class="section level3">
+<h3>The best model</h3>
+<p>The models obtained from the above calculations are very similar to
+each other, so the model with the highest values of R² and Q² was
+selected.</p>
+<pre class="r"><code># Function for MAE calculation
+MAE &lt;- function(experimental, predicted) {
+  mean(abs(experimental - predicted), na.rm = TRUE)
+}
+
+# Training
+set.seed(8)
+FinalModel &lt;- randomForest(x = AutoscDescT, y = RespTrain, 
+                           ntree = HypParm$ntree, 
+                           mtry = HypParm$mtry, 
+                           nodesize = HypParm$nodesize, 
+                           sampsize = sampsizevalue, 
+                           maxnodes = HypParm$maxnodes, 
+                           replace = TRUE, 
+                           importance = TRUE, 
+                           do.trace = FALSE)  
+    
+RespTrainPred &lt;- predict(FinalModel, newdata = AutoscDescT)
+RespValPred &lt;- predict(FinalModel, newdata = AutoscDescV)
+
+ResidualsTrain &lt;- RespTrain - RespTrainPred
+ResidualsVal &lt;- RespVal - RespValPred
+
+R2 &lt;- ResultsAll$R2[1]
+RMSEc &lt;- ResultsAll$RMSEc[1]
+MAEt &lt;- MAE(RespTrain, RespTrainPred)
+Q2ext &lt;- ResultsAll$Q2ext[1]
+RMSEext &lt;- ResultsAll$RMSEext[1]
+Q2cv &lt;- ResultsAll$Q2cv[1]
+RMSEcv &lt;- ResultsAll$RMSEcv[1]
+
+SummaryModel &lt;- cbind(Summary, PredictedTox = c(RespTrainPred, RespValPred), Residuals = c(ResidualsTrain, ResidualsVal))
+print(head(SummaryModel))</code></pre>
+<pre><code>##      ChemName Dose Day Aspect_ratio BET_SSA Autoscaled_Dose Autoscaled_Day
+## 1 Flamruss101  162  90      1.00000   23.00       1.8002305      2.4090916
+## 2        DQ12  162 180      1.00000   10.10       1.8002305      5.4846430
+## 3        DQ12   18   3      1.00000   10.10      -0.7568489     -0.5639415
+## 4   NanoFil 9  162   1    300.00000   24.07       1.8002305     -0.6322871
+## 5   NRCWE-006   18   1     77.02703   26.00      -0.7568489     -0.6322871
+## 6   NRCWE-006   18   3     77.02703   26.00      -0.7568489     -0.5639415
+##   Autoscaled_Aspect_ratio Autoscaled_BET_SSA Experimental Set PredictedTox
+## 1              -0.3023654         -0.7975927         1.65   T     2.963129
+## 2              -0.3023654         -0.8904041         1.80   T     2.954673
+## 3              -0.3023654         -0.8904041         2.00   T     3.832904
+## 4              -0.2291935         -0.7898944        24.50   T    20.842396
+## 5              -0.2837599         -0.7760087        26.60   T    22.364593
+## 6              -0.2837599         -0.7760087        28.40   T    21.532345
+##   Residuals
+## 1 -1.313129
+## 2 -1.154673
+## 3 -1.832904
+## 4  3.657604
+## 5  4.235407
+## 6  6.867655</code></pre>
+<pre class="r"><code>print(tail(SummaryModel))</code></pre>
+<pre><code>##            ChemName Dose Day Aspect_ratio BET_SSA Autoscaled_Dose
+## 276       Bentonite   18   3     83.33333   73.59      -0.7568489
+## 277 NanoFil 3000 Se   18   3    300.00000    2.74      -0.7568489
+## 278       NRCWE-006   54   3     77.02703   26.00      -0.1175791
+## 279 NanoFil 3000 Se   54   1    300.00000    2.74      -0.1175791
+## 280       NanoFil 9  162   3    300.00000   24.07       1.8002305
+## 281       NRCWE-006   54   1     77.02703   26.00      -0.1175791
+##     Autoscaled_Day Autoscaled_Aspect_ratio Autoscaled_BET_SSA Experimental Set
+## 276     -0.5639415              -0.2822166         -0.4336137        18.20   V
+## 277     -0.5639415              -0.2291935         -0.9433570        18.95   V
+## 278     -0.5639415              -0.2837599         -0.7760087        19.50   V
+## 279     -0.6322871              -0.2291935         -0.9433570        20.00   V
+## 280     -0.5639415              -0.2291935         -0.7898944        21.90   V
+## 281     -0.6322871              -0.2837599         -0.7760087        22.85   V
+##     PredictedTox     Residuals
+## 276     18.19996  3.736875e-05
+## 277     18.15789  7.921096e-01
+## 278     20.90565 -1.405651e+00
+## 279     18.64054  1.359455e+00
+## 280     19.67781  2.222190e+00
+## 281     21.93975  9.102540e-01</code></pre>
+<pre class="r"><code>print(paste(&quot;Results of model: R2 = &quot;, round(R2, 2), &quot;RMSEc = &quot;, round(RMSEc, 2), &quot;Q2ext = &quot;, round(Q2ext, 2), &quot;RMSEext = &quot;, round(RMSEext, 2), &quot;Q2cv = &quot;, round(Q2cv, 2), &quot;RMSEcv =&quot;, round(RMSEcv, 2), &quot;MAE = &quot;, round(MAEt, 2)))</code></pre>
+<pre><code>## [1] &quot;Results of model: R2 =  0.94 RMSEc =  1.32 Q2ext =  0.89 RMSEext =  1.6 Q2cv =  0.89 RMSEcv = 1.78 MAE =  0.98&quot;</code></pre>
 </div>
 
 

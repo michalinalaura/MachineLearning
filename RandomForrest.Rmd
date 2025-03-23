@@ -440,7 +440,49 @@ for (i in 1:nrow(BestRes)) {
                                        RMSEcv = RMSEcv))
 }
 
-resultsall<- cbind(resultscv, Q2ext = BestRes$Q2, RMSEext = BestRes$RMSEext, R2 = BestRes$R2, RMSEc = BestRes$RMSEc)
-print(resultsall)
+ResultsAll<- cbind(resultscv, Q2ext = BestRes$Q2, RMSEext = BestRes$RMSEext, R2 = BestRes$R2, RMSEc = BestRes$RMSEc)
+print(ResultsAll)
+```
+
+### The best model
+
+The models obtained from the above calculations are very similar to each other, so the model with the highest values of R² and Q² was selected.
+
+```{r Summary}
+# Function for MAE calculation
+MAE <- function(experimental, predicted) {
+  mean(abs(experimental - predicted), na.rm = TRUE)
+}
+
+# Training
+set.seed(8)
+FinalModel <- randomForest(x = AutoscDescT, y = RespTrain, 
+                           ntree = HypParm$ntree, 
+                           mtry = HypParm$mtry, 
+                           nodesize = HypParm$nodesize, 
+                           sampsize = sampsizevalue, 
+                           maxnodes = HypParm$maxnodes, 
+                           replace = TRUE, 
+                           importance = TRUE, 
+                           do.trace = FALSE)  
+    
+RespTrainPred <- predict(FinalModel, newdata = AutoscDescT)
+RespValPred <- predict(FinalModel, newdata = AutoscDescV)
+
+ResidualsTrain <- RespTrain - RespTrainPred
+ResidualsVal <- RespVal - RespValPred
+
+R2 <- ResultsAll$R2[1]
+RMSEc <- ResultsAll$RMSEc[1]
+MAEt <- MAE(RespTrain, RespTrainPred)
+Q2ext <- ResultsAll$Q2ext[1]
+RMSEext <- ResultsAll$RMSEext[1]
+Q2cv <- ResultsAll$Q2cv[1]
+RMSEcv <- ResultsAll$RMSEcv[1]
+
+SummaryModel <- cbind(Summary, PredictedTox = c(RespTrainPred, RespValPred), Residuals = c(ResidualsTrain, ResidualsVal))
+print(head(SummaryModel))
+print(tail(SummaryModel))
+print(paste("Results of model: R2 = ", round(R2, 2), "RMSEc = ", round(RMSEc, 2), "Q2ext = ", round(Q2ext, 2), "RMSEext = ", round(RMSEext, 2), "Q2cv = ", round(Q2cv, 2), "RMSEcv =", round(RMSEcv, 2), "MAE = ", round(MAEt, 2)))
 ```
 
