@@ -486,3 +486,37 @@ print(tail(SummaryModel))
 print(paste("Results of model: R2 = ", round(R2, 2), "RMSEc = ", round(RMSEc, 2), "Q2ext = ", round(Q2ext, 2), "RMSEext = ", round(RMSEext, 2), "Q2cv = ", round(Q2cv, 2), "RMSEcv =", round(RMSEcv, 2), "MAE = ", round(MAEt, 2)))
 ```
 
+### Residual density 
+
+In a well-fitting model, the residuals should follow a normal distribution.
+
+```{r Residuals density}
+MaxDens <- as.numeric(ceiling(max(SummaryModel$Residuals)))
+MinDens <- as.numeric(floor(min(SummaryModel$Residuals)))
+
+# The first plot
+DensityPlot <- ggdensity((SummaryModel),
+                          x = "Residuals",
+                          size = 0.7,
+                          fill = "Set", 
+                          palette = c("#004AF5", "#F7B213")) +
+  scale_x_continuous(limits = c(MinDens, MaxDens)) +
+  scale_fill_manual(values = c("T" = "#004AF5", "V" = "#F7B213"), 
+                    labels = c("Training Set", "Validation Set"))
+
+DensityPlot <- ggpar(DensityPlot, legend.title = "", legend = "top", xlab = "", 
+                      ylab = "Residual density %TDNA BAL", ggtheme = theme_bw())
+
+DensityPlot <- DensityPlot + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black", size = 1),
+        panel.background = element_rect(fill = "#faf8ef"), 
+        axis.title.y = element_text(size = 15), 
+        legend.text = element_text(face = "bold", size = 10))
+
+# Save Residual density plot to PNG
+ggsave("docs/figures/ResDens.png", plot = DensityPlot, width = 1500, height = 1500, units = "px", dpi = 300)
+```
+
+![](docs/figures/ResDens.png){width=60%}
