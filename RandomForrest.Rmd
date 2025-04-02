@@ -520,3 +520,47 @@ ggsave("docs/figures/ResDens.png", plot = DensityPlot, width = 1500, height = 15
 ```
 
 ![](docs/figures/ResDens.png){width=60%}
+
+### Observed versus predicted plot 
+
+Scatter plot of experimentally determined versus predicted values. The straight line indicates a perfect match between the experimental and predicted values.
+
+```{r observed versus predicted plot}
+# Selection of columns for analysis
+ObvsPred <- SummaryModel[(ncol(SummaryModel) - 3):(ncol(SummaryModel) - 1)]
+MaxRespo <- as.numeric(ceiling(max(ObvsPred[, c(1, 3)], na.rm = TRUE))) + 0.1
+
+# Plot
+ObvsPredPlot <- ggplot(ObvsPred) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour = "#7F7F7F", alpha = 1, size = 1.5) +
+  
+  geom_point(data = subset(ObvsPred, Set == "T"), 
+             aes(x = Experimental, y = PredictedTox, fill = "Training Set %TDNA BAL", shape = "Training Set %TDNA BAL"), 
+             size = 7, alpha = 0.8, stroke = 0.9) +
+  
+  geom_point(data = subset(ObvsPred, Set == "V"), 
+             aes(x = Experimental, y = PredictedTox, fill = "Validation Set %TDNA BAL", shape = "Validation Set %TDNA BAL"), 
+             size = 5.5, alpha = 0.5, stroke = 0.9) +
+  theme_bw() +
+  xlab(paste("Experimental %TDNA BAL toxicity")) +
+  ylab(paste("Predicted %TDNA BAL toxicity")) +
+  theme(axis.title.x = element_text(size = 15),
+        axis.title.y = element_text(size = 15)) +
+  scale_x_continuous(limits = c(0, MaxRespo)) +
+  scale_y_continuous(limits = c(0, MaxRespo)) +
+  scale_fill_manual(name = "", 
+                    values = c("Training Set %TDNA BAL" = "#004AF5", 
+                               "Validation Set %TDNA BAL" = "#c5f500")) +
+  scale_shape_manual(name = "", 
+                     values = c("Training Set %TDNA BAL" = 21, 
+                                "Validation Set %TDNA BAL" = 22)) +
+  theme(legend.position = "top", 
+        legend.text = element_text(face = "bold", size = 10),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+# Save Residual density plot to PNG
+ggsave("docs/figures/ObvsPredPlot.png", plot = ObvsPredPlot, width = 2000, height = 1500, units = "px", dpi = 300)
+```
+
+![](docs/figures/ObvsPredPlot.png){width=60%}
