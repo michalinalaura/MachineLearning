@@ -536,11 +536,11 @@ ObvsPredPlot <- ggplot(ObvsPred) +
   
   geom_point(data = subset(ObvsPred, Set == "T"), 
              aes(x = Experimental, y = PredictedTox, fill = "Training Set %TDNA BAL", shape = "Training Set %TDNA BAL"), 
-             size = 7, alpha = 0.8, stroke = 0.9) +
+             size = 6.5, alpha = 0.8, stroke = 0.9) +
   
   geom_point(data = subset(ObvsPred, Set == "V"), 
              aes(x = Experimental, y = PredictedTox, fill = "Validation Set %TDNA BAL", shape = "Validation Set %TDNA BAL"), 
-             size = 5.5, alpha = 0.5, stroke = 0.9) +
+             size = 5, alpha = 0.5, stroke = 0.9) +
   theme_bw() +
   xlab(paste("Experimental %TDNA BAL toxicity")) +
   ylab(paste("Predicted %TDNA BAL toxicity")) +
@@ -564,3 +564,92 @@ ggsave("docs/figures/ObvsPredPlot.png", plot = ObvsPredPlot, width = 2000, heigh
 ```
 
 ![](docs/figures/ObvsPredPlot.png){width=60%}
+### William's plot 
+
+A Williams plot offers a visual representation of this relationship, plotting leverage values against cross-validated standardized residuals to identify response outliers and/or structurally distinct chemicals that fall outside the applicability domain. The critical leverage value (h* ), representing the cut-off distance from the centroid, is generally set at h* = 3(M + 1)/N, where M is the number of descriptors (i.e., independent variables) in the model, and N is the number of TS compounds. The boundaries of the applicability domain with respect to the response space were defined by the limit of ±3 standardized residuals. Predictions were considered reliable and trustworthy, providing a high level of assurance only when the query compound fell within a square area bounded by ±3 standard deviation units and the leverage threshold (h*).
+
+```{r Applicability domain Williams plot}
+#Leverage threshold 
+h_l <- 3*(ncol(AutoscDescT)+1)/nrow(AutoscDescT)
+
+TrainMatrix <- data.matrix(AutoscDescT) 
+ValMatrix <- data.matrix(AutoscDescV)
+TrainMatrixT <- t(TrainMatrix)
+MultpMatrix <- TrainMatrixT %*% TrainMatrix
+InvMatrix <- solve(MultpMatrix)
+
+hTrainValue <- numeric()
+
+# Leverage values
+for (idx in 1:nrow(TrainMatrix)) {
+  xi_t <- t(as.matrix(TrainMatrix[idx, ]))
+  xi <- as.matrix(TrainMatrix[idx, ])
+  hi <- xi_t %*% InvMatrix %*% xi
+  hTrainValue <- c(hTrainValue, hi)
+}
+
+hValValue <- numeric()
+
+for (idx in 1:nrow(ValMatrix)) {
+  xi_v <- t(as.matrix(ValMatrix[idx,]))
+  xi <- as.matrix(ValMatrix[idx,])
+  hi <- xi_v %*% InvMatrix %*% xi
+  hValValue <- c(hValValue, hi)
+}
+
+# Standardized residuals
+StandResTrain <- rep(NA, length(ResidualsTrain))
+
+NaIdxT1 <- !is.na(ResidualsTrain)
+StandResTrain[NaIdxT1] <- scaling(ResidualsTrain[NaIdxT1], ResidualsTrain[NaIdxT1])
+
+StandResVal <- rep(NA, length(ResidualsVal))
+
+NaIdxV1 <- !is.na(ResidualsVal)
+StandResVal[NaIdxV1] <- scaling(ResidualsVal[NaIdxV1], ResidualsTrain[NaIdxT1])
+
+TrainAD <- cbind(hTrainValue, StandResTrain)
+ValAD <- cbind(hValValue, StandResVal)
+ADdata <- cbind(as.data.frame(rbind(TrainAD, ValAD)), Set = SummaryModel$Set)
+
+MaxLev <- as.numeric(ceiling(max(ADdata[,1]) * 10) / 10) 
+MaxSRes <- abs(as.numeric(ceiling(max(ADdata[,2]))))
+MinSRes <- abs(as.numeric(floor(min(ADdata[,2]))))
+StRes <- max(MaxSRes, MinSRes)
+
+# Plot
+WilliamsPlot <- ggplot() +
+  geom_hline(yintercept = c(-3, 3), linetype = "dashed", colour = "#7F7F7F", alpha = 1, size = 1) +
+  geom_vline(xintercept = h_l, linetype = "dashed", colour = "#7F7F7F", alpha = 1, size = 1) +
+  
+  geom_point(data = subset(ADdata, Set == "T"), 
+             aes(x = hTrainValue, y = StandResTrain, fill = "Training Set %TDNA BAL", shape = "Training Set %TDNA BAL"), 
+             size = 6.5, alpha = 0.8, stroke = 0.9) +
+  
+  geom_point(data = subset(ADdata, Set == "V"), 
+             aes(x = hTrainValue, y = StandResTrain, fill = "Validation Set %TDNA BAL", shape = "Validation Set %TDNA BAL"), 
+             size = 5, alpha = 0.6, stroke = 0.9) +
+  
+  theme_bw() +
+  xlab(paste("Leverages")) +
+  ylab(paste("Standardized residuals")) +
+  scale_x_continuous(limits = c(0, MaxLev)) +
+  scale_y_continuous(limits = c(-StRes, StRes)) +
+  scale_fill_manual(name = "", 
+                    values = c("Training Set %TDNA BAL" = "#004AF5", 
+                               "Validation Set %TDNA BAL" = "#c5f500")) +
+  scale_shape_manual(name = "", 
+                     values = c("Training Set %TDNA BAL" = 21, 
+                                "Validation Set %TDNA BAL" = 22)) +
+  theme(axis.title.x = element_text(size = 15),
+        axis.title.y = element_text(size = 15),
+        legend.position = "top", 
+        legend.text = element_text(face = "bold", size = 10),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+# Save WilliamsPlot to PNG
+ggsave("docs/figures/WilliamsPlot.png", plot = WilliamsPlot, width = 2000, height = 1500, units = "px", dpi = 300)
+```
+
+![](docs/figures/WilliamsPlot.png){width=60%}
