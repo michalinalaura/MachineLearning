@@ -49,24 +49,20 @@ SortedData <- data[order(data[, ncol(data)]), ]
 # The most extreme values should be included in the training set. The number of rows with the lowest and highest values to be included in the training set: 
 nexv = 3
 
-ExRows <- rbind(SortedData[1:nexv, ], SortedData[(nrow(SortedData)-nexv+1):nrow(SortedData), ])
+ExRows <- rbind(
+  SortedData[1:nexv, ], 
+  SortedData[(nrow(SortedData)-nexv+1):nrow(SortedData), ]
+  )
 DataSplit <- SortedData[-c(1:nexv, (nrow(SortedData)-nexv+1):nrow(SortedData)), ]
 
-# Training and validation sets 
-ValidationSet <- data.frame()  
-TrainingSet <- data.frame()       
-
-for (i in seq_len(nrow(DataSplit))) {
-  # The data split ratio is 2:1, where every third element is placed in the validation set
-  if (i %% 3 == 1) {
-    ValidationSet <- rbind(ValidationSet, DataSplit[i, ])
-  } else {
-    TrainingSet <- rbind(TrainingSet, DataSplit[i, ])
-  }
-}
+# Data sets
+indices <- seq_len(nrow(DataSplit))
+TrainingSet <- DataSplit[indices %% 3 != 1, ]
+ValidationSet <- DataSplit[indices %% 3 == 1, ]
 
 TrainingSet <- rbind(ExRows, TrainingSet)
 
+# Column with name of sets
 TrainingSet$Set <- 'T'
 ValidationSet$Set <- 'V'
 
@@ -79,31 +75,24 @@ DescT <- as.matrix(TrainingSet[, 2:(ncol(TrainingSet) - 2)])
 DescV <- as.matrix(ValidationSet[, 2:(ncol(ValidationSet) - 2)])
 
 # Name of columns
-ChemNameT <- TrainingSet[,1]
-ChemNameV <- ValidationSet[,1]
+ChemNameT <- TrainingSet[[1]]
+ChemNameV <- ValidationSet[[1]]
 
 # Autoscaling data
-scaling <- function(x, sc_data){
-  average <- mean(sc_data)
-  stdev <- sd(sc_data)
-  if (stdev == 0) {
+autoscale <- function(x, ref){
+  m <- mean(ref)
+  s <- sd(ref)
+  if (s == 0) {
     return(rep(0, length(x)))  
   }
-  autoscaled_x <- (x-average)/stdev
-  autoscaled_x
+  (x - m) / s
 }
 
-AutoscDescT <- as.data.frame(matrix(NA, nrow = nrow(DescT), ncol = ncol(DescT)))
-AutoscDescV <- as.data.frame(matrix(NA, nrow = nrow(DescV), ncol = ncol(DescV)))
+AutoscDescT <- apply(DescT, 2, autoscale, ref = DescT)
+AutoscDescV <- apply(DescV, 2, autoscale, ref = DescT)
 
-
-for (i in 1:ncol(DescT)) {
-  AutoscDescT[, i] <- scaling(DescT[, i], DescT[, i])
-}
-
-for (i in 1:ncol(DescV)) {
-  AutoscDescV[, i] <- scaling(DescV[, i], DescT[, i])
-}
+AutoscDescT <- as.data.frame(AutoscDescT)
+AutoscDescV <- as.data.frame(AutoscDescV)
 
 DescNames <- colnames(DescT)
 AutoscDescNames <- paste0("Autoscaled_", DescNames) 
@@ -601,12 +590,12 @@ for (idx in 1:nrow(ValMatrix)) {
 StandResTrain <- rep(NA, length(ResidualsTrain))
 
 NaIdxT1 <- !is.na(ResidualsTrain)
-StandResTrain[NaIdxT1] <- scaling(ResidualsTrain[NaIdxT1], ResidualsTrain[NaIdxT1])
+StandResTrain[NaIdxT1] <- autoscale(ResidualsTrain[NaIdxT1], ResidualsTrain[NaIdxT1])
 
 StandResVal <- rep(NA, length(ResidualsVal))
 
 NaIdxV1 <- !is.na(ResidualsVal)
-StandResVal[NaIdxV1] <- scaling(ResidualsVal[NaIdxV1], ResidualsTrain[NaIdxT1])
+StandResVal[NaIdxV1] <- autoscale(ResidualsVal[NaIdxV1], ResidualsTrain[NaIdxT1])
 
 TrainAD <- cbind(hTrainValue, StandResTrain)
 ValAD <- cbind(hValValue, StandResVal)
